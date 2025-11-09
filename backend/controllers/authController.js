@@ -77,21 +77,60 @@ exports.registerUser = async (req, res) => {
             token: generateToken(user._id)
         });
 
-    } catch (error) {
-        console.error("Registration error:", error);
-        return res.status(500).json({ 
-            message: "Error registering user", 
-            error: error.message 
-        });
+    }  catch (err) {
+        res
+        .status(500)
+        .json({ message: "Error registering user", error: err.message });
     }
 };
 
 // Login user
 exports.loginUser = async (req, res) => {
+    const { email, password } = req.body;
 
+    if (!email || !password) {
+        return res.status(400).json({ message: "Please fill in all required fields" });
+    }
+
+    try {
+        // === CHECK IF USER EXISTS ===
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(400).json({ message: "User does not exist" });
+        }
+
+        // === CHECK IF PASSWORD IS CORRECT ===
+        if (!user || !(await user.comparePassword(password))) {
+            return res.status(400).json({ message: "Invalid credentials" });
+        }
+
+        // === SUCCESS RESPONSE (ONLY ONE!) ===
+        return res.status(201).json({
+            id: user._id,
+            user,
+            token: generateToken(user._id)
+        })
+    }
+    catch (err) {
+        res
+        .status(500)
+        .json({ message: "Error logging in user", error: err.message });
+    }
 }
 
 // Get user by ID
 exports.getUserInfo = async (req, res) => {
+    try{
+        const user = await User.findById(req.user.id).select("-password");
+        if (!user) {
+            return res.status(400).json({ message: "User does not exist" });
+        }
 
+        return res.status(200).json(user);
+    }
+    catch (err) {
+        res
+        .status(500)
+        .json({ message: "Error getting user info", error: err.message });
+    }
 }
