@@ -4,28 +4,42 @@ const app = express();
 const cors = require("cors");
 const mongoose = require("mongoose");
 const path = require("path");
+const fs = require("fs"); // ← AJOUTÉ
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
+const incomeRoutes = require("./routes/incomeRoutes");
 
-// Middleware to handle cors
-app.use(cors(
-    {
-        origin: process.env.CLIENT_URL || "*",
-        methods : ["GET", "POST", "PUT", "DELETE"],
-        allowedHeaders: ["Content-Type", "Authorization"]
-    }
-));
+// === CRÉATION DU DOSSIER UPLOADS SI ABSENT ===
+const uploadDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir);
+    console.log("Dossier 'uploads' créé");
+}
 
+// Middleware CORS
+app.use(cors({
+    origin: process.env.CLIENT_URL || "*",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
+// Parser JSON
 app.use(express.json());
 
-// Connect to MongoDB
-
+// Connexion DB
 connectDB();
 
-app.use("/api/v1/auth", authRoutes)
+// Routes
+app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/income", incomeRoutes);
 
-// server uploads folder
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
+// Servir les images uploadées
+app.use("/uploads", express.static(uploadDir));
+
+// Démarrage
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server is running on port ${PORT}`))
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+    console.log(`Uploads disponibles sur: http://localhost:${PORT}/uploads`);
+});
