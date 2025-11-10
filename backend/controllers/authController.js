@@ -8,68 +8,29 @@ const generateToken = (id) => {
     });
 }
 
-// Register user
-// exports.registerUser = async (req, res) => {
-//     const {
-//         fullName, email, password, profilImageUrl
-//     } = req.body;
 
-//     // Validation : check if all fields are filled
-//     if (!fullName || !email || !password) {
-//         res.status(400).json({ message: "Please fill in all fields" })
-//     }
-
-//     try {
-//         // Check if user already exists
-//         const userExists = await User.findOne({ email });
-
-//         if (userExists) {
-//             res.status(400).json({ message: "User already exists" })
-//         }
-
-//         // Create new user
-//         const user = await User.create({
-//             fullName,
-//             email,
-//             password,
-//             profilImageUrl
-//         });
-
-//         res.status(201).json({
-//             id: user._id,
-//             user,
-//             token: generateToken(user._id)
-//         });
-//     }
-//     catch (error) {
-//         res.status(500).json({ message: "Error registering user", error: error.message })
-//     }
-// }
+// controllers/authController.js
 exports.registerUser = async (req, res) => {
-    const { fullName, email, password, profilImageUrl } = req.body;
+    const { fullName, email, password, profileImageUrl } = req.body; // ← CORRIGÉ !
 
-    // === VALIDATION ===
     if (!fullName || !email || !password) {
         return res.status(400).json({ message: "Please fill in all required fields" });
     }
 
     try {
-        // === CHECK IF USER EXISTS ===
         const userExists = await User.findOne({ email });
         if (userExists) {
             return res.status(400).json({ message: "User already exists" });
         }
 
-        // === CREATE USER ===
         const user = await User.create({
             fullName,
             email,
             password,
-            profileImageUrl: profilImageUrl || null
+            profileImageUrl: profileImageUrl || null // ← maintenant ça marche
         });
 
-        // === SUCCESS RESPONSE (ONLY ONE!) ===
-        return res.status(201).json({
+        res.status(201).json({
             _id: user._id,
             fullName: user.fullName,
             email: user.email,
@@ -77,10 +38,9 @@ exports.registerUser = async (req, res) => {
             token: generateToken(user._id)
         });
 
-    }  catch (err) {
-        res
-        .status(500)
-        .json({ message: "Error registering user", error: err.message });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Error registering user", error: err.message });
     }
 };
 
