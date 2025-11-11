@@ -1,35 +1,35 @@
 const User = require("../models/User");
 const XLSX = require("xlsx");
-const Income = require("../models/Income");
+const Expense = require("../models/Expense");
 
-// Add income source
-exports.addIncome = async (req, res) => {
-    console.log("=== [addIncome] req.user:", req.user?.email);
+// Add expense
+exports.addExpense = async (req, res) => {
+    console.log("=== [addExpense] req.user:", req.user?.email);
 
     if (!req.user) {
         return res.status(401).json({ message: "Utilisateur non authentifié" });
     }
 
-    const { icon, source, amount, date } = req.body;
+    const { icon, category, amount, date } = req.body;
 
-    if (!icon || !source || !amount || !date) {
+    if (!icon || !category || !amount || !date) {
         return res.status(400).json({
             success: false,
-            message: "Tous les champs sont requis : icon, source, amount, date"
+            message: "Tous les champs sont requis : icon, category, amount, date"
         });
     }
 
     try {
-        const income = await Income.create({
+        const expense = await Expense.create({
             userId: req.user._id,
             icon,
-            source,
-            amount: parseFloat(amount),
+            amount,
+            category,
             date: new Date(date)
         });
 
         // Récupère l'utilisateur pour afficher son nom/email
-        const populatedIncome = await Income.findById(income._id)
+        const populatedExpense = await Expense.findById(expense._id)
             .populate("userId", "fullName email");
 
         // Format date en français (Côte d'Ivoire)
@@ -48,22 +48,22 @@ exports.addIncome = async (req, res) => {
             success: true,
             message: "Revenu ajouté avec succès",
             data: {
-                id: income._id,
-                icon: income.icon,
-                source: income.source,
-                amount: income.amount,
-                date: formatDate(income.date),
-                addedAt: formatDate(income.createdAt),
+                id: expense._id,
+                icon: expense.icon,
+                category: expense.category,
+                amount: expense.amount,
+                date: formatDate(expense.date),
+                addedAt: formatDate(expense.createdAt),
                 user: {
                     id: req.user._id,
-                    name: populatedIncome.userId?.fullName || "Inconnu",
-                    email: populatedIncome.userId?.email
+                    name: populatedExpense.userId?.fullName || "Inconnu",
+                    email: populatedExpense.userId?.email
                 }
             }
         });
 
     } catch (error) {
-        console.error("Erreur addIncome:", error);
+        console.error("Erreur addExpense:", error);
         res.status(500).json({
             success: false,
             message: "Erreur serveur lors de l'ajout",
@@ -73,23 +73,23 @@ exports.addIncome = async (req, res) => {
 };
 
 // GET ALL INCOMES
-exports.getAllIncome = async (req, res) => {
+exports.getAllExpense = async (req, res) => {
     try {
-        console.log("=== [getAllIncome] userId:", req.user._id);
+        console.log("=== [getAllExpense] userId:", req.user._id);
 
-        const incomes = await Income.find({ userId: req.user._id })
+        const expenses = await Expense.find({ userId: req.user._id })
             .sort({ date: -1 })  // ← Tri décroissant par date
             .select("-__v");     // ← Optionnel : retire __v
 
-        console.log(`Revenus trouvés: ${incomes.length}`);
+        console.log(`Depenses trouvés: ${expenses.length}`);
 
         res.status(200).json({
             success: true,
-            count: incomes.length,
-            data: incomes.map(inc => ({
+            count: expenses.length,
+            data: expenses.map(inc => ({
                 id: inc._id,
                 icon: inc.icon,
-                source: inc.source,
+                category: inc.category,
                 amount: inc.amount,
                 date: inc.date.toLocaleDateString("fr-CI"),
                 addedAt: inc.createdAt.toLocaleDateString("fr-CI", {
@@ -100,7 +100,7 @@ exports.getAllIncome = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Erreur getAllIncome:", error);
+        console.error("Erreur getAllExpense:", error);
         res.status(500).json({
             success: false,
             message: "Erreur serveur",
@@ -109,17 +109,17 @@ exports.getAllIncome = async (req, res) => {
     }
 };
 
-// delete income
-exports.deleteIncome = async (req, res) => {
+// delete expense
+exports.deleteExpense = async (req, res) => {
     try {
-        await Income.findByIdAndDelete(req.params.id);
+        await Expense.findByIdAndDelete(req.params.id);
         res.json({
             success: true,
             message: "Revenu supprimé avec succès"
         })
     }
     catch (error) {
-        console.error("Erreur deleteIncome:", error);
+        console.error("Erreur deleteExpense:", error);
         res.status(500).json({
             success: false,
             message: "Erreur serveur",
@@ -127,16 +127,16 @@ exports.deleteIncome = async (req, res) => {
         });
     }
 }
-// download income excel
-exports.downloadIncomeExcel = async (req, res) => {
+// download expense excel
+exports.downloadExpenseExcel = async (req, res) => {
     try {
-        const income = await Income.find({ userId: req.user._id })
+        const expense = await Expense.find({ userId: req.user._id })
             .sort({ date: -1 })
             .select("-__v");
 
         // Préparer les données pour Excel
-        const data = income.map((item) => ({
-            Source: item.source,
+        const data = expense.map((item) => ({
+            Category: item.category,
             Montant: item.amount,
             Date: item.date,
         }));
@@ -144,15 +144,15 @@ exports.downloadIncomeExcel = async (req, res) => {
         // Générer le fichier Excel
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.json_to_sheet(data);
-        XLSX.utils.book_append_sheet(wb, ws, "Income");
+        XLSX.utils.book_append_sheet(wb, ws, "Expense");
 
-        const filePath = "income_details.xlsx";
+        const filePath = "expense_details.xlsx";
         XLSX.writeFile(wb, filePath);
 
         // Télécharger le fichier
         res.download(filePath);
     } catch (error) {
-        console.error("Erreur downloadIncomeExcel:", error);
+        console.error("Erreur downloadExpenseExcel:", error);
         res.status(500).json({
             success: false,
             message: "Erreur serveur",
