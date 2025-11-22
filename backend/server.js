@@ -43,10 +43,11 @@ app.use("/api/v1/dashboard", dashboardRoutes);
 
 // Servir les images uploadées
 app.use("/uploads", express.static(uploadDir));
-
-// Démarrage
+// Démarrage - ÉCOUTE SUR TOUTES LES INTERFACES
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {  // ← AJOUTEZ '0.0.0.0'
     console.log(`Server is running on port ${PORT}`);
+    console.log(`Accessible localement: http://localhost:${PORT}`);
+    console.log(`Accessible sur réseau: http://192.168.1.72:${PORT}`);  // ← VOTRE IP
     console.log(`Uploads disponibles sur: http://localhost:${PORT}/uploads`);
 });
